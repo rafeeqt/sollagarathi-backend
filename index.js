@@ -34,7 +34,7 @@ app.get("/word-of-the-day", async (req, res) => {
   res.json(r.rows[0] || {});
 });
 
-// Search with fallback
+// Search with multi-source fallback
 app.get("/search/:word", async (req, res) => {
   const { word } = req.params;
 
@@ -56,7 +56,7 @@ app.get("/search/:word", async (req, res) => {
     });
   }
 
-  // 2️⃣ Wiktionary fallback
+  // 2️⃣ Wiktionary
   try {
     const wikiUrl =
       "https://ta.wiktionary.org/w/api.php" +
@@ -81,17 +81,86 @@ app.get("/search/:word", async (req, res) => {
         text: page.extract
       });
     }
+  } catch {}
 
-    return res.json({
-      source: "none",
-      data: []
-    });
-  } catch (e) {
-    return res.json({
-      source: "error",
-      message: "Online source unreachable"
-    });
-  }
+  // 3️⃣ Agarathi.com
+  try {
+    const agarathiUrl =
+      "https://www.agarathi.com/word/" + encodeURIComponent(word);
+
+    const r2 = await fetch(agarathiUrl);
+    const html = await r2.text();
+
+    if (html && html.length > 500) {
+      await pool.query(
+        "INSERT INTO words(tamil_word) VALUES($1) ON CONFLICT DO NOTHING",
+        [word]
+      );
+
+      return res.json({
+        source: "agarathi",
+        text:
+          "இந்த சொல் Agarathi.com-இல் கிடைக்கிறது. முழு விளக்கத்தை அங்கு பார்க்கவும்:\n" +
+          agarathiUrl,
+        link: agarathiUrl
+      });
+    }
+  } catch {}
+
+  // 4️⃣ Thanithamizhakarathikalanjiyam
+  try {
+    const tUrl =
+      "https://thanithamizhakarathikalanjiyam.github.io/?q=" +
+      encodeURIComponent(word);
+
+    const r3 = await fetch(tUrl);
+    const html2 = await r3.text();
+
+    if (html2 && html2.length > 500) {
+      await pool.query(
+        "INSERT INTO words(tamil_word) VALUES($1) ON CONFLICT DO NOTHING",
+        [word]
+      );
+
+      return res.json({
+        source: "thanithamizh",
+        text:
+          "இந்த சொல் ‘தனித்தமிழ் அகராதி களஞ்சியம்’ தளத்தில் கிடைக்கிறது. முழு விளக்கத்தை அங்கு பார்க்கவும்:\n" +
+          tUrl,
+        link: tUrl
+      });
+    }
+  } catch {}
+
+  // 5️⃣ DSAL
+  try {
+    const dsalUrl =
+      "https://dsal.uchicago.edu/cgi-bin/app/tamil-lexicon_query.py?qs=" +
+      encodeURIComponent(word);
+
+    const r4 = await fetch(dsalUrl);
+    const html3 = await r4.text();
+
+    if (html3 && html3.length > 1000) {
+      await pool.query(
+        "INSERT INTO words(tamil_word) VALUES($1) ON CONFLICT DO NOTHING",
+        [word]
+      );
+
+      return res.json({
+        source: "dsal",
+        text:
+          "இந்த சொல் University of Chicago – DSAL அகராதிகளில் கிடைக்கிறது. முழு விளக்கத்தை அங்கு பார்க்கவும்:\n" +
+          dsalUrl,
+        link: dsalUrl
+      });
+    }
+  } catch {}
+
+  return res.json({
+    source: "none",
+    data: []
+  });
 });
 
 app.listen(process.env.PORT || 3000, () =>
