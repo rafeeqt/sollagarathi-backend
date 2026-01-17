@@ -37,6 +37,19 @@ app.get("/search/:word", async (req, res) => {
   res.json(result.rows);
 });
 
+// 👇 NEW ENDPOINT
+app.get("/word-of-the-day", async (req, res) => {
+  const r = await pool.query(
+    `SELECT tamil_word 
+     FROM search_history 
+     GROUP BY tamil_word 
+     ORDER BY COUNT(*) DESC 
+     LIMIT 1`
+  );
+
+  res.json(r.rows[0] || {});
+});
+
 app.listen(process.env.PORT || 3000, () =>
   console.log("Server started")
 );
