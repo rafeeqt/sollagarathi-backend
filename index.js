@@ -47,19 +47,7 @@ app.get("/word-of-the-day", async (req, res) => {
      LIMIT 1`
   );
 
-  // 👇 IF WORD DOES NOT EXISTS 
- <script>
-  async function searchWord() {
-    const word = document.getElementById("word").value;
-    const res = await fetch(
-      "https://sollagarathi-backend.onrender.com/search/" + word
-    );
-    const data = await res.json();
-
-    document.getElementById("result").innerText =
-      data.length ? data[0].tamil_word : "இந்த சொல் இன்னும் சேர்க்கப்படவில்லை.";
-  }
-</script>
+ 
 
 
   res.json(r.rows[0] || {});
