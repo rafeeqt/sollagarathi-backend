@@ -37,7 +37,7 @@ app.get("/search/:word", async (req, res) => {
   res.json(result.rows);
 });
 
-// 👇 NEW ENDPOINT
+// NEW ENDPOINT
 app.get("/word-of-the-day", async (req, res) => {
   const r = await pool.query(
     `SELECT tamil_word 
