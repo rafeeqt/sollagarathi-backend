@@ -9,14 +9,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: false }
-});
+let pool = null;
+
+//const pool = new Pool({
+ // host: process.env.DB_HOST,
+//  user: process.env.DB_USER,
+ // password: process.env.DB_PASSWORD,
+ // database: process.env.DB_NAME,
+ // port: process.env.DB_PORT,
+//  ssl: { rejectUnauthorized: false }
+//});
 
 app.get("/", (req, res) => {
   res.send("Sollagarathi Backend Running");
@@ -33,6 +35,11 @@ app.get("/word-of-the-day", async (req, res) => {
   );
   res.json(r.rows[0] || {});
 });
+
+if (!pool) {
+  return res.json({ source: "error", message: "DB not configured yet" });
+}
+
 
 // Search with multi-source fallback
 app.get("/search/:word", async (req, res) => {
