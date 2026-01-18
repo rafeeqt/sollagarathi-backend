@@ -14,8 +14,10 @@ console.log("DATABASE_URL =", process.env.DATABASE_URL);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  family: 4   // 👈 Force IPv4, avoid IPv6 ENETUNREACH
 });
+
 
 // Ensure tables exist
 async function initDB() {
