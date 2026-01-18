@@ -10,10 +10,9 @@ app.use(cors());
 app.use(express.json());
 
 const pool = new Pool({
-  connectionString: process.env.postgresql://postgres:Alhamdulillah12#@db.hscavqgbwwytexuybutm.supabase.co:5432/postgres,
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
-
 
 app.get("/", (req, res) => {
   res.send("Sollagarathi Backend Running");
