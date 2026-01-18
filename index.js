@@ -19,9 +19,8 @@ console.log("DATABASE_URL =", process.env.DATABASE_URL);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  family: 4   // 👈 Force IPv4, avoid IPv6 ENETUNREACH
+  family: 4
 });
-
 
 // Ensure tables exist
 async function initDB() {
@@ -65,14 +64,15 @@ app.get("/word-of-the-day", async (req, res) => {
        LIMIT 1`
     );
     res.json(r.rows[0] || {});
-  } catch (e) {
+  } catch {
     res.json({});
   }
 });
 
-// Search with multi-source fallback
+// Multi-source Search (collect ALL results)
 app.get("/search/:word", async (req, res) => {
   const { word } = req.params;
+  const results = [];
 
   try {
     await pool.query(
@@ -81,17 +81,18 @@ app.get("/search/:word", async (req, res) => {
     );
 
     // 1️⃣ Local DB
-    const local = await pool.query(
-      "SELECT * FROM words WHERE tamil_word=$1",
-      [word]
-    );
-
-    if (local.rows.length > 0) {
-      return res.json({
-        source: "local",
-        data: local.rows
-      });
-    }
+    try {
+      const local = await pool.query(
+        "SELECT * FROM words WHERE tamil_word=$1",
+        [word]
+      );
+      if (local.rows.length > 0) {
+        results.push({
+          source: "local",
+          text: `உள்ளூர் தரவுத்தளத்தில் "${word}" உள்ளது.`
+        });
+      }
+    } catch {}
 
     // 2️⃣ Wiktionary
     try {
@@ -103,7 +104,6 @@ app.get("/search/:word", async (req, res) => {
 
       const r = await fetch(wikiUrl);
       const j = await r.json();
-
       const pages = j.query.pages;
       const page = pages[Object.keys(pages)[0]];
 
@@ -113,7 +113,7 @@ app.get("/search/:word", async (req, res) => {
           [word]
         );
 
-        return res.json({
+        results.push({
           source: "wiktionary",
           text: page.extract
         });
@@ -134,7 +134,7 @@ app.get("/search/:word", async (req, res) => {
           [word]
         );
 
-        return res.json({
+        results.push({
           source: "agarathi",
           text:
             "இந்த சொல் Agarathi.com-இல் கிடைக்கிறது. முழு விளக்கத்தை அங்கு பார்க்கவும்:\n" +
@@ -158,7 +158,7 @@ app.get("/search/:word", async (req, res) => {
           [word]
         );
 
-        return res.json({
+        results.push({
           source: "thanithamizh",
           text:
             "இந்த சொல் ‘தனித்தமிழ் அகராதி களஞ்சியம்’ தளத்தில் கிடைக்கிறது. முழு விளக்கத்தை அங்கு பார்க்கவும்:\n" +
@@ -182,7 +182,7 @@ app.get("/search/:word", async (req, res) => {
           [word]
         );
 
-        return res.json({
+        results.push({
           source: "dsal",
           text:
             "இந்த சொல் University of Chicago – DSAL அகராதிகளில் கிடைக்கிறது. முழு விளக்கத்தை அங்கு பார்க்கவும்:\n" +
@@ -191,15 +191,12 @@ app.get("/search/:word", async (req, res) => {
       }
     } catch {}
 
-    return res.json({
-      source: "none",
-      data: []
-    });
+    return res.json({ results });
   } catch (e) {
     console.error("SEARCH ERROR:", e.message);
     return res.status(500).json({
-      source: "error",
-      message: "Internal error"
+      results: [],
+      error: "Internal error"
     });
   }
 });
