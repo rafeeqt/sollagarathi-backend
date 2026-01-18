@@ -2,6 +2,10 @@ import express from "express";
 import cors from "cors";
 import pkg from "pg";
 import fetch from "node-fetch";
+import dns from "dns";
+
+// Force Node.js to prefer IPv4 over IPv6
+dns.setDefaultResultOrder("ipv4first");
 
 const { Pool } = pkg;
 
