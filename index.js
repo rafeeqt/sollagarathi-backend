@@ -314,7 +314,7 @@ app.listen(process.env.PORT || 3000, () =>
   console.log("Server started")
 );
 
-// 🇬🇧 English → Tamil suggestion (Phase 1 – simple dictionary)
+// 🇬🇧 English → Tamil suggestion 
 app.post("/suggest/english", async (req, res) => {
   const { word } = req.body;
   if (!word) return res.json({ options: [] });
