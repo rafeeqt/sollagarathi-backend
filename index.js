@@ -210,6 +210,34 @@ app.get("/search/:word", async (req, res) => {
   }
 });
 
+// 🔤 Transliterate: English letters → Tamil suggestions
+app.post("/transliterate", async (req, res) => {
+  const { text } = req.body;
+
+  if (!text) {
+    return res.json({ options: [] });
+  }
+
+  try {
+    const url =
+      "https://inputtools.google.com/request?itc=ta-t-i0-und&num=10&text=" +
+      encodeURIComponent(text);
+
+    const r = await fetch(url);
+    const j = await r.json();
+
+    // Google API format: ["SUCCESS", [[ "aram", ["அறம்","ஆரம்","அரம்"], ... ]]]
+    if (j[0] === "SUCCESS" && j[1]?.length) {
+      const options = j[1][0][1];
+      return res.json({ options });
+    }
+
+    return res.json({ options: [] });
+  } catch (e) {
+    console.error("TRANSLITERATE ERROR:", e.message);
+    return res.json({ options: [] });
+  }
+});
 
 // 🧠 Resolve Stage – English/Tamil workflow
 app.post("/resolve", async (req, res) => {
