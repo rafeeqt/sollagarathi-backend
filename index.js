@@ -123,7 +123,7 @@ app.get("/search/:word", async (req, res) => {
         );
 
         results.push({
-          source: "wiktionary",
+          source: "",
           text: page.extract
         });
       }
