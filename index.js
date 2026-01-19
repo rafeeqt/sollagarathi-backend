@@ -41,6 +41,15 @@ async function initDB() {
       );
     `);
 
+    await pool.query(`
+      create table if not exists master_entries (
+        id serial primary key,
+        lemma text unique,
+        entry text,
+        created_at timestamp default now()
+      );
+    `);
+
     console.log("Database tables ensured");
   } catch (e) {
     console.error("DB INIT ERROR:", e.message);
@@ -69,7 +78,7 @@ app.get("/word-of-the-day", async (req, res) => {
   }
 });
 
-// Multi-source Search (collect ALL results)
+// 🔍 Multi-source Search (collect ALL results)
 app.get("/search/:word", async (req, res) => {
   const { word } = req.params;
   const results = [];
@@ -199,6 +208,78 @@ app.get("/search/:word", async (req, res) => {
       error: "Internal error"
     });
   }
+});
+
+
+// 🧠 Resolve Stage – English/Tamil workflow
+app.post("/resolve", async (req, res) => {
+  const { query } = req.body;
+
+  const isTamil = /[\u0B80-\u0BFF]/.test(query);
+
+  if (!isTamil) {
+    // English → Tamil options (placeholder logic)
+    const options = [
+      query + "ம்",
+      query + "ல்",
+      "அன்பு",
+      "நன்மை"
+    ];
+
+    return res.json({
+      stage: "choose",
+      options
+    });
+  }
+
+  const canonical = query.trim();
+
+  const r = await pool.query(
+    "select entry from master_entries where lemma=$1",
+    [canonical]
+  );
+
+  if (r.rows.length) {
+    return res.json({
+      stage: "entry",
+      lemma: canonical,
+      entry: r.rows[0].entry
+    });
+  }
+
+  return res.json({
+    stage: "entry",
+    lemma: canonical,
+    entry: `<i>இந்த சொல் புதிது. முழு Tamil-OED பதிவாக உருவாக்க தயாராக உள்ளது.</i>`
+  });
+});
+
+// 🏗 Finalize – Create Master Entry
+app.post("/finalize", async (req, res) => {
+  const { word } = req.body;
+
+  const entry = `
+  <b>சொல்:</b> ${word}<br>
+  <b>வேர்:</b> —<br>
+  <b>மூல மொழி:</b> —<br>
+  <b>வரலாறு:</b> —<br>
+  <b>பொருள் வளர்ச்சி:</b> —<br>
+  <b>இலக்கிய மேற்கோள்:</b> —<br>
+  <b>அறிஞர் கருத்து:</b> —<br>
+  <b>இணைப்புகள்:</b> —<br>
+  `;
+
+  await pool.query(
+    `insert into master_entries(lemma, entry)
+     values($1,$2)
+     on conflict (lemma) do update set entry=$2`,
+    [word, entry]
+  );
+
+  res.json({
+    lemma: word,
+    entry
+  });
 });
 
 app.listen(process.env.PORT || 3000, () =>
