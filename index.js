@@ -354,3 +354,7 @@ app.get("/neighbours/:word", async (req, res) => {
     res.json({ words: [] });
   }
 });
+
+app.get("/__test", (req, res) => {
+  res.json({ ok: true });
+});
