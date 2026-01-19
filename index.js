@@ -313,3 +313,44 @@ app.post("/finalize", async (req, res) => {
 app.listen(process.env.PORT || 3000, () =>
   console.log("Server started")
 );
+
+// 🇬🇧 English → Tamil suggestion (Phase 1 – simple dictionary)
+app.post("/suggest/english", async (req, res) => {
+  const { word } = req.body;
+  if (!word) return res.json({ options: [] });
+
+  const map = {
+    virtue: ["அறம்", "நற்பண்பு", "ஒழுக்கம்"],
+    love: ["அன்பு", "காதல்"],
+    justice: ["நீதி"],
+    knowledge: ["அறிவு"],
+    duty: ["கடமை"]
+  };
+
+  const key = word.toLowerCase();
+  return res.json({
+    options: map[key] || []
+  });
+});
+
+// 🔤 Tamil neighbourhood (prefix-based)
+app.get("/neighbours/:word", async (req, res) => {
+  const { word } = req.params;
+
+  try {
+    const r = await pool.query(
+      `SELECT tamil_word
+       FROM words
+       WHERE tamil_word LIKE $1
+       ORDER BY tamil_word
+       LIMIT 20`,
+      [word + "%"]
+    );
+
+    res.json({
+      words: r.rows.map(x => x.tamil_word)
+    });
+  } catch (e) {
+    res.json({ words: [] });
+  }
+});
