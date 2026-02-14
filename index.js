@@ -129,12 +129,12 @@ app.get("/search/:word", async (req, res) => {
       }
     } catch {}
 
-    // 3️⃣ Agarathi
+    // 3️⃣ Tamil lex
     try {
-      const agarathiUrl =
-        "https://www.agarathi.com/word/" + encodeURIComponent(word);
+      const TamillexUrl =
+        "https://dsal.uchicago.edu/dictionaries/tamil-lex/" + encodeURIComponent(word);
 
-      const r2 = await fetch(agarathiUrl);
+      const r2 = await fetch(TamillexUrl);
       const html = await r2.text();
 
       if (html && html.length > 500) {
