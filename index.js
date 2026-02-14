@@ -165,3 +165,53 @@ app.get("/", (req, res) => res.send("Sollagarathi Backend is Active"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// 9. SECRET STATUS DASHBOARD
+app.get("/status", async (req, res) => {
+  const secretKey = "sollagarathi2026"; // Change this to your preferred "password"
+  const userKey = req.query.key;
+
+  if (userKey !== secretKey) {
+    return res.status(401).send("🔒 Unauthorized: Secret key required.");
+  }
+
+  try {
+    // 1. Get total words
+    const wordCount = await pool.query("SELECT COUNT(*) FROM master_entries");
+    
+    // 2. Get history count (total searches)
+    const searchCount = await pool.query("SELECT COUNT(*) FROM search_history");
+
+    // 3. Get last 5 searched words
+    const recentSearches = await pool.query("SELECT tamil_word, searched_at FROM search_history ORDER BY searched_at DESC LIMIT 5");
+
+    // Construct a simple HTML view
+    let html = `
+      <body style="font-family: sans-serif; padding: 40px; line-height: 1.6; background: #f4f4f9;">
+        <h1 style="color: #2c3e50;">📊 Sollagarathi Backend Status</h1>
+        <hr>
+        <div style="display: flex; gap: 20px;">
+          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex: 1;">
+            <h3>📚 Total Words</h3>
+            <p style="font-size: 24px; font-weight: bold; color: #27ae60;">${wordCount.rows[0].count}</p>
+          </div>
+          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex: 1;">
+            <h3>🔍 Total Searches</h3>
+            <p style="font-size: 24px; font-weight: bold; color: #2980b9;">${searchCount.rows[0].count}</p>
+          </div>
+        </div>
+        
+        <h3>🕒 Recent Activity</h3>
+        <ul style="background: white; padding: 20px; border-radius: 8px; list-style: none;">
+          ${recentSearches.rows.map(r => `<li><b>${r.tamil_word}</b> - <small>${new Date(r.searched_at).toLocaleString()}</small></li>`).join('')}
+        </ul>
+        
+        <p style="margin-top: 30px; font-size: 12px; color: #7f8c8d;">Sync Status: Active (Runs daily at 00:00)</p>
+      </body>
+    `;
+    
+    res.send(html);
+  } catch (err) {
+    res.status(500).send("Error fetching status: " + err.message);
+  }
+});
