@@ -44,7 +44,7 @@ async function initDB() {
 }
 initDB();
 
-// --- NEW: DAILY WORD SYNC AUTOMATION ---
+// --- NEW: DAILY WORD SYNC AUTOMATION --
 async function dailyWordSync() {
   console.log("⏳ Starting Daily Word Sync...");
   try {
