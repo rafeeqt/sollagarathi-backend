@@ -153,3 +153,33 @@ app.get("/", (req, res) => res.send("Sollagarathi Backend is Active"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// A. Register a Contributor
+app.post("/api/contributors/register", async (req, res) => {
+  const { full_name, email, role, qualification, institution } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO contributors (full_name, email, role, qualification, institution, status) 
+       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING contributor_id`,
+      [full_name, email, role, qualification, institution]
+    );
+    res.json({ success: true, id: result.rows[0].contributor_id, message: "Application submitted for review." });
+  } catch (err) {
+    res.status(400).json({ error: "Email already registered or invalid data." });
+  }
+});
+
+// B. Propose a Word Version (The "Draft" Layer)
+app.post("/api/propose-version", async (req, res) => {
+  const { word_id, field_name, field_value, source, contributor_id } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO word_versions (word_id, field_name, field_value, source, contributor_id, status) 
+       VALUES ($1, $2, $3, $4, $5, 'draft')`,
+      [word_id, field_name, field_value, source, contributor_id]
+    );
+    res.json({ success: true, message: "Draft saved for moderator approval." });
+  } catch (err) {
+    res.status(500).json({ error: "Could not save draft." });
+  }
+});
