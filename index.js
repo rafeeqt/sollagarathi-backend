@@ -198,3 +198,31 @@ app.post("/api/contributors/register", async (req, res) => {
     res.status(400).json({ error: "மின்னஞ்சல் ஏற்கனவே பதிவில் உள்ளது அல்லது தவறான விவரம்." });
   }
 });
+
+// Add this to your existing index.js on Render
+app.post("/transliterate", async (req, res) => {
+  const { text } = req.body;
+  
+  if (!text) {
+    return res.json({ options: [] });
+  }
+
+  try {
+    // We fetch from Google's public input tools API
+    const googleUrl = `https://inputtools.google.com/request?itc=ta-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage&text=${encodeURIComponent(text)}`;
+    
+    const response = await fetch(googleUrl);
+    const data = await response.json();
+
+    if (data[0] === "SUCCESS") {
+      // data[1][0][1] contains the list of Tamil word suggestions
+      const tamilOptions = data[1][0][1];
+      res.json({ options: tamilOptions });
+    } else {
+      res.json({ options: [] });
+    }
+  } catch (error) {
+    console.error("Transliteration Error:", error);
+    res.status(500).json({ error: "Failed to fetch transliteration" });
+  }
+});
