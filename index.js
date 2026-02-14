@@ -89,19 +89,7 @@ app.get("/search/:word", async (req, res) => {
       [word]
     );
 
-    // 1️⃣ Local DB
-    try {
-      const local = await pool.query(
-        "SELECT * FROM words WHERE tamil_word=$1",
-        [word]
-      );
-      if (local.rows.length > 0) {
-        results.push({
-          source: "local",
-          text: `உள்ளூர் தரவுத்தளத்தில் "${word}" உள்ளது.`
-        });
-      }
-    } catch {}
+
 
     // 2️⃣ Wiktionary
     try {
@@ -129,7 +117,7 @@ app.get("/search/:word", async (req, res) => {
       }
     } catch {}
 
-    // 3️⃣ Tamil lex
+    // 2️⃣ Tamil lex
     try {
       const TamillexUrl =
         "https://dsal.uchicago.edu/dictionaries/tamil-lex/" + encodeURIComponent(word);
@@ -152,7 +140,7 @@ app.get("/search/:word", async (req, res) => {
       }
     } catch {}
 
-    // 4️⃣ Thanithamizh
+    // 3️⃣ Thanithamizh
     try {
       const tUrl =
         "https://thanithamizhakarathikalanjiyam.github.io/?q=" +
@@ -176,7 +164,7 @@ app.get("/search/:word", async (req, res) => {
       }
     } catch {}
 
-    // 5️⃣ DSAL
+    // 4️⃣ DSAL
     try {
       const dsalUrl =
         "https://dsal.uchicago.edu/cgi-bin/app/tamil-lexicon_query.py?qs=" +
