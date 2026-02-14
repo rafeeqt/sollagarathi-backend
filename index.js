@@ -123,30 +123,26 @@ app.get("/api/word/:word", async (req, res) => {
 });
 
 // 5. GOOGLE TRANSLITERATION (English -> Tamil typing)
+// 5. GOOGLE TRANSLITERATION (English -> Tamil typing)
 app.post("/transliterate", async (req, res) => {
   const { text } = req.body;
-  
-  if (!text) {
-    return res.json({ options: [] });
-  }
+  if (!text) return res.json({ options: [] });
 
   try {
-    // We fetch from Google's public input tools API
     const googleUrl = `https://inputtools.google.com/request?itc=ta-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage&text=${encodeURIComponent(text)}`;
     
     const response = await fetch(googleUrl);
     const data = await response.json();
 
+    // Ensure we are sending clean JSON back to the frontend
+    res.set("Access-Control-Allow-Origin", "*"); 
     if (data[0] === "SUCCESS") {
-      // data[1][0][1] contains the list of Tamil word suggestions
-      const tamilOptions = data[1][0][1];
-      res.json({ options: tamilOptions });
+      res.json({ options: data[1][0][1] });
     } else {
       res.json({ options: [] });
     }
-  } catch (error) {
-    console.error("Transliteration Error:", error);
-    res.status(500).json({ error: "Failed to fetch transliteration" });
+  } catch (e) {
+    res.json({ options: [] });
   }
 });
 
