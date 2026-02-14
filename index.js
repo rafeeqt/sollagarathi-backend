@@ -127,7 +127,8 @@ app.post("/transliterate", async (req, res) => {
   const { text } = req.body;
   if (!text) return res.json({ options: [] });
   try {
-    const r = await fetch(`https://inputtools.google.com/request?itc=ta-t-i0-und&num=5&text=${encodeURIComponent(text)}`);
+    // Optimized URL for Google Input Tools to ensure stability
+    const r = await fetch(`https://inputtools.google.com/request?itc=ta-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=demopage&text=${encodeURIComponent(text)}`);
     const j = await r.json();
     res.json({ options: j[0] === "SUCCESS" ? j[1][0][1] : [] });
   } catch (e) {
