@@ -183,3 +183,18 @@ app.post("/api/propose-version", async (req, res) => {
     res.status(500).json({ error: "Could not save draft." });
   }
 });
+
+app.post("/api/contributors/register", async (req, res) => {
+  const { full_name, email, role, qualification, institution } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO contributors (full_name, email, role, qualification, institution) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING contributor_id`,
+      [full_name, email, role, qualification, institution]
+    );
+    res.json({ success: true, id: result.rows[0].contributor_id });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: "மின்னஞ்சல் ஏற்கனவே பதிவில் உள்ளது அல்லது தவறான விவரம்." });
+  }
+});
