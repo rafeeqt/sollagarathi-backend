@@ -4,7 +4,7 @@ import pkg from "pg";
 import fetch from "node-fetch";
 import dns from "dns";
 
-// Force Node.js to prefer IPv4 for Supabase stability
+// Force Node.js to prefer IPv4 for Supabase stability on Render
 dns.setDefaultResultOrder("ipv4first");
 
 const { Pool } = pkg;
@@ -13,13 +13,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 1. DATABASE CONNECTION
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
   family: 4
 });
 
-// --- 1. Database Initialization ---
+// 2. DATABASE INITIALIZATION (Ensuring tables exist)
 async function initDB() {
   try {
     await pool.query(`
@@ -42,8 +43,8 @@ async function initDB() {
 }
 initDB();
 
-// --- 2. SEO: Dynamic Sitemap.xml ---
-// This allows Google to find all 10,000+ words automatically
+// 3. SEO: DYNAMIC SITEMAP.XML
+// Pulls up to 15,000 words from Supabase for Google indexing
 app.get("/sitemap.xml", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT lemma FROM master_entries LIMIT 15000");
@@ -69,45 +70,59 @@ app.get("/sitemap.xml", async (req, res) => {
   }
 });
 
-// --- 3. Optimized Search Waterfall ---
-// Priority: 1. Local Word Bank (SEO) -> 2. Wiktionary -> 3. DSAL (Chicago)
+// 4. THE CORE SEARCH API (Multi-Source Waterfall)
 app.get("/api/word/:word", async (req, res) => {
   const { word } = req.params;
   const wordData = { lemma: word, results: [] };
 
   try {
-    // Log search history
+    // A. Log to History
     await pool.query("INSERT INTO search_history(tamil_word) VALUES($1)", [word]);
 
-    // Check Local Supabase "Word Bank"
+    // B. Check Supabase "Word Bank"
     const local = await pool.query("SELECT entry FROM master_entries WHERE lemma = $1", [word]);
     if (local.rows.length > 0) {
-      wordData.results.push({ source: "Sollagarathi Master", text: local.rows[0].entry });
+      wordData.results.push({ 
+        source: "Sollagarathi Master", 
+        text: local.rows[0].entry 
+      });
     }
 
-    // Fetch from Wiktionary (Real-time fallback)
+    // C. Wiktionary API
     try {
-      const wikiRes = await fetch(`https://ta.wiktionary.org/w/api.php?action=query&format=json&prop=extracts&explaintext=1&titles=${encodeURIComponent(word)}`);
+      const wikiRes = await fetch(`https://ta.wiktionary.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&titles=${encodeURIComponent(word)}`);
       const wikiJson = await wikiRes.json();
       const page = wikiJson.query.pages[Object.keys(wikiJson.query.pages)[0]];
       if (page && page.extract) {
-        wordData.results.push({ source: "Wiktionary", text: page.extract });
+        wordData.results.push({ source: "Wiktionary (தமிழ்)", text: page.extract });
       }
     } catch (e) {}
 
-    // Fetch from DSAL University of Chicago
-    try {
-      const dsalUrl = `https://dsal.uchicago.edu/cgi-bin/app/tamil-lexicon_query.py?qs=${encodeURIComponent(word)}`;
-      wordData.results.push({ source: "University of Madras Lexicon (DSAL)", url: dsalUrl, type: "link" });
-    } catch (e) {}
+    // D. University of Chicago (DSAL)
+    const dsalUrl = `https://dsal.uchicago.edu/cgi-bin/app/tamil-lexicon_query.py?qs=${encodeURIComponent(word)}`;
+    wordData.results.push({ 
+      source: "University of Madras Lexicon (DSAL)", 
+      url: dsalUrl, 
+      text: "சென்னைப் பல்கலைக்கழகத் தமிழ்ப் பேரகராதி விளக்கம்.",
+      type: "link" 
+    });
+
+    // E. அகராதி.com
+    const agarathiUrl = `https://www.அகராதி.com/s/tamil/${encodeURIComponent(word)}`;
+    wordData.results.push({
+      source: "அகராதி.com",
+      url: agarathiUrl,
+      text: "அகராதி.com தளத்தில் விளக்கத்தைப் பார்க்க.",
+      type: "link"
+    });
 
     res.json(wordData);
   } catch (err) {
-    res.status(500).json({ error: "Search failed" });
+    res.status(500).json({ error: "Internal Search Error" });
   }
 });
 
-// --- 4. Google Transliteration (Keeping your working logic) ---
+// 5. GOOGLE TRANSLITERATION (English -> Tamil typing)
 app.post("/transliterate", async (req, res) => {
   const { text } = req.body;
   if (!text) return res.json({ options: [] });
@@ -120,6 +135,21 @@ app.post("/transliterate", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => res.send("Sollagarathi API Live"));
+// 6. WORD OF THE DAY (Most searched word)
+app.get("/word-of-the-day", async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT tamil_word FROM search_history 
+      GROUP BY tamil_word ORDER BY COUNT(*) DESC LIMIT 1
+    `);
+    res.json(r.rows[0] || { tamil_word: "அறம்" });
+  } catch {
+    res.json({ tamil_word: "அறம்" });
+  }
+});
 
-app.listen(process.env.PORT || 3000, () => console.log("🚀 Server spinning on Render"));
+// 7. HEALTH CHECK & PORT
+app.get("/", (req, res) => res.send("Sollagarathi Backend is Active"));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
