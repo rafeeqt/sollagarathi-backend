@@ -15,33 +15,39 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Added logging to see what's happening in Render Logs
+// index.js - Updated to include Source Identity
 app.post("/resolve", async (req, res) => {
   const { query } = req.body;
-  console.log("Searching for:", query); // Check Render Logs for this
+  console.log("Searching for:", query);
   
   try {
+    // 1. Search Local Master DB
     const local = await pool.query("SELECT * FROM master_entries WHERE lemma = $1", [query]);
-    
     if (local.rows.length > 0) {
-      console.log("Found in DB");
-      return res.json({ stage: "entry", lemma: local.rows[0].lemma, entry: local.rows[0].entry });
+      return res.json({ 
+        stage: "entry", 
+        source: "சொல் அகராதி (Sollagarathi)", // Source Name
+        lemma: local.rows[0].lemma, 
+        entry: local.rows[0].entry 
+      });
     }
 
-    // Try Wiktionary
+    // 2. Search Wiktionary
     const wiki = await fetch(`https://ta.wiktionary.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&titles=${encodeURIComponent(query)}`);
     const wikiJson = await wiki.json();
     const page = wikiJson.query.pages[Object.keys(wikiJson.query.pages)[0]];
 
     if (page && page.extract) {
-      console.log("Found in Wiktionary");
-      return res.json({ stage: "entry", lemma: query, entry: page.extract });
+      return res.json({ 
+        stage: "entry", 
+        source: "விக்சனரி (Wiktionary)", // Source Name
+        lemma: query, 
+        entry: page.extract 
+      });
     }
 
-    console.log("No results found anywhere");
     res.json({ stage: "choose", options: [query] });
   } catch (err) {
-    console.error("DATABASE ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -50,3 +56,4 @@ app.post("/resolve", async (req, res) => {
 app.get("/", (req, res) => res.send("Active"));
 
 app.listen(process.env.PORT || 3000, () => console.log("Server Live"));
+
