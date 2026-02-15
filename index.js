@@ -120,6 +120,26 @@ app.get("/api/word/:word", async (req, res) => {
   }
 });
 
+const getExternalLinks = (word) => {
+  return [
+    { name: "Wiktionary", url: `https://ta.wiktionary.org/wiki/${encodeURIComponent(word)}` },
+    { name: "Tamil Lexicon", url: `https://dsal.uchicago.edu/cgi-bin/app/tamil-lex_query.py?qs=${encodeURIComponent(word)}` },
+    { name: "Winslow", url: `https://dsal.uchicago.edu/cgi-bin/app/winslow_query.py?qs=${encodeURIComponent(word)}` },
+    { name: "Mydictionary", url: `https://mydictionary.in/search?q=${encodeURIComponent(word)}` }
+  ];
+};
+
+// Update your search route to include these links
+app.get("/resolve/:word", async (req, res) => {
+  const word = req.params.word;
+  // ... your existing Supabase logic ...
+  
+  res.json({
+    local_data: result.rows[0],
+    external_links: getExternalLinks(word)
+  });
+});
+
 // 5. GOOGLE TRANSLITERATION
 app.post("/transliterate", async (req, res) => {
   const { text } = req.body;
