@@ -19,17 +19,17 @@ const pool = new Pool({
 app.post("/resolve", async (req, res) => {
   const { query } = req.body;
   
-  // LOGGING REINSTATED: This will show up in your Render Logs
-  console.log("Searching for:", query); 
+  // LOGGING: This will show up in your Render Logs
+  console.log("Searching for:", query);
   
   try {
-    // 1. Check your Master Database
+    // 1. Search Local Master DB
     const local = await pool.query("SELECT * FROM master_entries WHERE lemma = $1", [query]);
     if (local.rows.length > 0) {
-      console.log("Result found in Master DB");
+      console.log("Result found in Local DB");
       return res.json({ 
         stage: "entry", 
-        source: "சொல் அகராதி (Master DB)", 
+        source: "சொல் அகராதி (Sollagarathi)", 
         lemma: local.rows[0].lemma, 
         entry: local.rows[0].entry 
       });
@@ -50,20 +50,18 @@ const wiki = await fetch(`https://ta.wiktionary.org/w/api.php?action=query&forma
       });
     }
 
+ // 3. No Results
     console.log("No result found for:", query);
     res.json({ stage: "choose", options: [query] });
+
   } catch (err) {
     console.error("DATABASE ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-    console.log("No result found for:", query);
-    res.json({ stage: "choose", options: [query] });
-  } catch (err) {
-    console.error("DATABASE ERROR:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+
+app.get("/", (req, res) => res.send("Active"));
+app.listen(process.env.PORT || 3000, () => console.log("Server Live"));
 
 // Simple Health Check
 app.get("/", (req, res) => res.send("Active"));
