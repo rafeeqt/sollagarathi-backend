@@ -16,20 +16,14 @@ const pool = new Pool({
 });
 
 // index.js - Updated to include Source Identity
-app.post("/resolve", async (req, res) => {
+  app.post("/resolve", async (req, res) => {
   const { query } = req.body;
-  
-  // LOGGING REINSTATED: This will show up in your Render Logs
-  console.log("Searching for:", query); 
-  
   try {
-    // 1. Check your Master Database
     const local = await pool.query("SELECT * FROM master_entries WHERE lemma = $1", [query]);
     if (local.rows.length > 0) {
-      console.log("Result found in Master DB");
       return res.json({ 
         stage: "entry", 
-        source: "சொல் அகராதி (Master DB)", 
+        source: "சொல் அகராதி (Master DB)", // Source title
         lemma: local.rows[0].lemma, 
         entry: local.rows[0].entry 
       });
@@ -41,14 +35,18 @@ app.post("/resolve", async (req, res) => {
     const page = wikiJson.query.pages[Object.keys(wikiJson.query.pages)[0]];
 
     if (page && page.extract) {
-      console.log("Result found in Wiktionary");
       return res.json({ 
         stage: "entry", 
-        source: "விக்சனரி (Wiktionary)", 
+        source: "விக்சனரி (Wiktionary)", // Source title
         lemma: query, 
         entry: page.extract 
       });
     }
+    res.json({ stage: "choose", options: [query] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
     console.log("No result found for:", query);
     res.json({ stage: "choose", options: [query] });
