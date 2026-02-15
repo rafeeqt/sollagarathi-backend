@@ -18,34 +18,30 @@ const pool = new Pool({
 // index.js - Updated to include Source Identity
 app.post("/resolve", async (req, res) => {
   const { query } = req.body;
-  console.log("Searching for:", query);
-  
   try {
-    // 1. Search Local Master DB
     const local = await pool.query("SELECT * FROM master_entries WHERE lemma = $1", [query]);
     if (local.rows.length > 0) {
       return res.json({ 
         stage: "entry", 
-        source: "சொல் அகராதி (Sollagarathi)", // Source Name
+        source: "சொல் அகராதி (Master DB)", // Source title
         lemma: local.rows[0].lemma, 
         entry: local.rows[0].entry 
       });
     }
 
     // 2. Search Wiktionary
-    const wiki = await fetch(`https://ta.wiktionary.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&titles=${encodeURIComponent(query)}`);
+ const wiki = await fetch(`https://ta.wiktionary.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&titles=${encodeURIComponent(query)}`);
     const wikiJson = await wiki.json();
     const page = wikiJson.query.pages[Object.keys(wikiJson.query.pages)[0]];
 
     if (page && page.extract) {
       return res.json({ 
         stage: "entry", 
-        source: "விக்சனரி (Wiktionary)", // Source Name
+        source: "விக்சனரி (Wiktionary)", // Source title
         lemma: query, 
         entry: page.extract 
       });
     }
-
     res.json({ stage: "choose", options: [query] });
   } catch (err) {
     res.status(500).json({ error: err.message });
