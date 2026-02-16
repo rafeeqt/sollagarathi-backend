@@ -2,7 +2,7 @@
  * PROJECT: சொல் அகராதி (Sollagarathi) - Tamil Lexicon
  * PURPOSE: Backend API for Search, Transliteration, and Scholar Management
  * TECHNOLOGY: Node.js, Express, PostgreSQL (pg)
- */
+ */ 
 
 import express from "express";
 import cors from "cors";
